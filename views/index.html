@@ -13,11 +13,29 @@
       crossorigin="anonymous"
     ></script>
   </head>
-  <body></body>
+  <body>
+    {{ template "form" . }}
+    <hr />
+    {{ template "display" . }}
+  </body>
 </html>
 {{ end }}
 
-{{ block "count" . }}
-  Count {{ .Count }}
-  <button hx-target="body" hx-post="/count">Count</button>
+{{ block "form" . }}
+<form hx-swap="outerHTML" hx-post="/contacts" hx-target="#contacts">
+  name: <input type="text" name="name" />
+  email: <input type="text" name="email" />
+  <button type="submit">Submit</button>
+</form>
+{{ end }}
+
+{{ block "display" . }}
+<div id="contacts" style="display: flex; flex-direction: column;">
+  {{ range .Contacts }}
+    <div>
+      <span>{{ .Name }}</span>
+      <span>{{ .Email }}</span>
+    </div>
+  {{ end }}
+</div>
 {{ end }}
