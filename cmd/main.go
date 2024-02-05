@@ -1,8 +1,8 @@
 package main
 
 import (
-	"html/template"
 	"fmt"
+	"html/template"
 	"io"
 
 	"github.com/labstack/echo/v4"
@@ -24,54 +24,103 @@ func newTemplate() *Templates {
 }
 
 type Contact struct {
-	Name string
+	Name  string
 	Email string
 }
 
 func newContact(name, email string) Contact {
-  return Contact{
-    Name: name,
-    Email: email,
-  }
+	return Contact{
+		Name:  name,
+		Email: email,
+	}
 }
 
 type Contacts = []Contact
 
 type Data struct {
-  Contacts Contacts
+	Contacts Contacts
 }
 
 func newData() Data {
-  return Data {
-    Contacts: []Contact {
-      newContact("John", "johndoe@gmail.com"),
-      newContact("Jane", "janedoe@gmail.com"),
-    },
-  }
+	return Data{
+		Contacts: []Contact{
+			newContact("John", "johndoe@gmail.com"),
+			newContact("Jane", "janedoe@gmail.com"),
+		},
+	}
 }
 
-func hasEmail(d *Data) bool {
-  
+func (d *Data) hasEmail(email string) bool {
+	for _, contact := range d.Contacts {
+		if contact.Email == email {
+			return true
+		}
+	}
+	return false
+}
+
+type FormData struct {
+	Values map[string]string
+	Errors map[string]string
+}
+
+func newFormData() FormData {
+	return FormData{
+		Values: make(map[string]string),
+		Errors: make(map[string]string),
+	}
+}
+
+type Page struct {
+	Data Data
+	Form FormData
+}
+
+func newPage() Page {
+	return Page{
+		Data: newData(),
+		Form: newFormData(),
+	}
 }
 
 func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 
-  data := newData()
+	page := newPage()
 	e.Renderer = newTemplate()
 
 	e.GET("/", func(c echo.Context) error {
-    fmt.Println(data)
-		return c.Render(200, "index", data)
+		return c.Render(200, "index", page)
 	})
 
 	e.POST("/contacts", func(c echo.Context) error {
-    name := c.FormValue("name")
-    email := c.FormValue("email")
+		name := c.FormValue("name")
+		email := c.FormValue("email")
 
-    data.Contacts = append(data.Contacts, newContact(name, email))
-		return c.Render(200, "display", data)
+		fmt.Println(name, email)
+
+		if page.Data.hasEmail(email) {
+			formData := newFormData()
+			formData.Values["name"] = name
+			formData.Values["email"] = email
+			formData.Errors["email"] = "Email already exists"
+			return c.Render(422, "form", formData)
+		}
+
+		contact := newContact(name, email)
+		page.Data.Contacts = append(page.Data.Contacts, contact)
+
+		err := c.Render(200, "form", newFormData())
+		if err != nil {
+			return err
+		}
+		return c.Render(200, "oob-contact", contact)
+	})
+
+	e.DELETE("/contacts/:id", func(c echo.Context) error {
+		id := c.Param("id")
+		return c.Render(200, "oob-contact", newContact("test", "test"))
 	})
 
 	e.Logger.Fatal(e.Start(":42069"))

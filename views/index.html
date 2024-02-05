@@ -12,19 +12,38 @@
       integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
       crossorigin="anonymous"
     ></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", (event) => {
+        document.body.addEventListener("htmx:beforeSwap", (evt) => {
+          if (evt.detail.xhr.status === 422 ) {
+            evt.detail.shouldSwap = true;
+            evt.detail.isError = false;
+          }
+        })
+      })
+    </script>
   </head>
   <body>
-    {{ template "form" . }}
+    {{ template "form" .Form }}
     <hr />
-    {{ template "display" . }}
+    {{ template "display" .Data }}
   </body>
 </html>
 {{ end }}
 
 {{ block "form" . }}
-<form hx-swap="outerHTML" hx-post="/contacts" hx-target="#contacts">
-  name: <input type="text" name="name" />
-  email: <input type="text" name="email" />
+<form hx-swap="outerHTML" hx-post="/contacts">
+  name: <input
+    {{ if .Values.name }} value="{{ .Values.name }}" {{ end }}
+    type="text" name="name" />
+  email: <input
+    {{ if .Values.email }} value="{{ .Values.email }}" {{ end }}
+    type="text" name="email" />
+  {{ if .Errors.email }}
+    <span style="color: #eb6f92">
+      {{ .Errors.email }}
+    </span>
+  {{ end }}
   <button type="submit">Submit</button>
 </form>
 {{ end }}
@@ -32,10 +51,26 @@
 {{ block "display" . }}
 <div id="contacts" style="display: flex; flex-direction: column;">
   {{ range .Contacts }}
-    <div>
-      <span>{{ .Name }}</span>
-      <span>{{ .Email }}</span>
-    </div>
+    {{ template "contact" . }}
   {{ end }}
 </div>
+{{ end }}
+
+{{ block "contact" . }}
+  <div style="display: flex; gap: 1rem">
+    <div style="width: 1rem; cursor: pointer">
+      <svg hx-delete="/contacts/1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path fill="none" d="M0 0h24v24H0z"/>
+        <path d="M4 2h16a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1zM3 6h18v16a1 1 0 01-1 1H4a1 1 0 01-1-1V6zm3 3v9a1 1 0 002 0v-9a1 1 0 00-2 0zm5 0v9a1 1 0 002 0v-9a1 1 0 00-2 0zm5 0v9a1 1 0 002 0v-9a1 1 0 00-2 0z"/>
+      </svg>
+    </div>
+    <div>Name: <span>{{ .Name }}</span></div>
+    <div>Email: <span>{{ .Email }}</span></div>
+  </div>
+{{ end }}
+
+{{ block "oob-contact" . }}
+  <div id="contacts" hx-swap-oob="afterbegin">
+    {{ template "contact" . }}
+  </div>
 {{ end }}
